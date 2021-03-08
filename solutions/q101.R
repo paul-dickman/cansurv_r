@@ -1,6 +1,7 @@
 ## Exercise 101
 ## Created: 2021-03-02 Enoch Chen 
-## Edited:  2021-03-02 Enoch Chen 
+## Edited:  2021-03-08 Enoch Chen 
+## Reference: Biostatistics III in R. https://biostat3.net/download/R/solutions/q1.html
 ###############################################################################
 ## Load the biostat3 library
 library(biostat3)

@@ -1,6 +1,7 @@
 ## Exercise 103
 ## Created: 2021-03-04 Enoch Chen 
 ## Edited:  2021-03-04 Enoch Chen 
+## Reference: Biostatistics III in R. https://biostat3.net/download/R/solutions/q2.html
 ###############################################################################
 ## Load the packages
 library(biostat3)
