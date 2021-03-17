@@ -1,12 +1,13 @@
 ## Exercise 111
 ## Created: 2021-03-15 Enoch Chen 
-## Edited:  2021-03-15 Enoch Chen
+## Edited:  2021-03-17 Enoch Chen
 ## Reference: Biostatistics III in R. https://biostat3.net/download/R/solutions/q7.html
 ###############################################################################
 ## Load the packages
 library(biostat3)
 library(haven)
 library(dplyr) # manipulate data
+library(car)   # for linearHypothesis
 
 ## Read data
 ## subset of stage 1
@@ -211,3 +212,48 @@ hr_k["sex2"]
 
 hr_k["sex2"]*hr_k["year8594Diagnosed 85-94:sex2"]
 # Explanation: The effect of sex for patients diagnosed 1985–94 is 0.5691922.
+
+##(k)-ii. Get the estimated effect for patients diagnosed 1985–94 using lincom
+biostat3::lincom(poisson_j,c("sex2 + year8594Diagnosed 85-94:sex2"), eform=TRUE)
+
+##(k)-iii. Create dummy variables for Poisson regression
+# Add confidence intervals for the rates
+melanoma_10y_spl <- melanoma_10y_spl %>% 
+                    mutate(sex_early = sex==2 & year8594=="Diagnosed 75-84",
+                           sex_latter = sex==2 & year8594=="Diagnosed 85-94")
+
+poisson_k <- glm( status == 1 ~ fu + agegrp + year8594 + sex_early +
+                                  sex_latter + offset( log(pt) ), 
+                          family=poisson,
+                          data=melanoma_10y_spl )
+summary(poisson_k)
+eform(poisson_k)
+
+##(k)-iv. Poisson regression giving us the effect of sex for year8594==2 
+poisson_k2 <- glm( status == 1 ~ fu + agegrp + year8594 + 
+                                sex:year8594 + offset( log(pt) ), 
+                  family=poisson,
+                  data=melanoma_10y_spl )
+
+summary(poisson_k2)
+eform(poisson_k2)
+
+##(l) Poisson regression stratified on calendar period
+poisson_l_early <- glm( status == 1 ~ fu + agegrp + sex + offset( log(pt) ),
+                                 family = poisson, data = melanoma_10y_spl,
+                                 subset = year8594 == "Diagnosed 75-84" )
+summary(poisson_l_early)
+eform(poisson_l_early)
+
+poisson_l_later <- glm( status == 1 ~ fu + agegrp + sex + offset( log(pt) ),
+                        family = poisson, data = melanoma_10y_spl,
+                        subset = year8594 == "Diagnosed 85-94" )
+summary(poisson_l_later)
+eform(poisson_l_later)
+
+# Poisson regression with only interactions
+poisson_l2 <- glm( status == 1 ~ fu + fu:year8594 + agegrp + agegrp:year8594
+                           + sex*year8594 + offset( log(pt) ),
+                           family=poisson, data=melanoma_10y_spl )
+summary(poisson_l2)
+eform(poisson_l2)
