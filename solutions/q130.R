@@ -1,20 +1,19 @@
 ## Exercise 130
 ## Created: 2021-04-16 Enoch Chen 
-## Edited:  2021-04-16 Enoch Chen
+## Edited:  2021-04-24 Enoch Chen
 ###############################################################################
 ## Load the packages
 library(biostat3)
 library(haven)
 library(dplyr)   # manipulate data
 library(splines) # natural splines
-
+library(ggplot2)
 
 ## Read data
 ## All stages
 melanoma <- read_dta("melanoma.dta")%>% 
             mutate(year8594 = ifelse(year8594 == 1, "Diagnosed 85-94", "Diagnosed 75-84"),
                    agegrp = as.factor(agegrp),
-                   sex = as.factor(sex),
                    female = ifelse(sex == 2, 1, 0),
                    stage = as.factor(stage),
                    subsite = as.factor(subsite))
@@ -64,13 +63,13 @@ melanoma_10y_spl <- mutate(melanoma_10y_spl,
                            fu = as.factor(start) )
 ## Collapse
 melanoma_10y_spl2 <- melanoma_10y_spl %>%
-                     group_by_all(fu, female, year8594, agegrp) %>%
+                     group_by(fu, female, year8594, agegrp) %>%
                      summarise(pt=sum(pt), d = sum(status == 1)) 
 
 ## Generate interval 
 melanoma_10y_spl2 <- melanoma_10y_spl2  %>%
                      group_by(fu) %>%
-                     mutate(interval =group_indices()) ## equivalent to Stata's egen interval=group()
+                     mutate(interval = group_indices()) ## equivalent to Stata's egen interval=group()
 
 ##(a)-ii.Fit a model with a parameter for each interval
 ## glm -1 is suppress constant term, equivalent to Stata's nocons
@@ -80,14 +79,18 @@ poisson_a <- glm( d ~ as.factor(interval) -1 + offset( log(pt)),
 summary(poisson_a)
 eform(poisson_a)
 
-## TODO: already predict, but how to put it back to original data?
 ##  predict the baseline (one parameter for each interval)
-newdata <- expand.grid(interval = as.factor(1:120), pt = 1 ) ## to have log(pt) = 0
+melanoma_10y_spl3 <- melanoma_10y_spl2 %>% mutate ( pt = 1 ) ## to have log(pt) = 0 as no offset
+melanoma_10y_spl3$haz_grp <- predict(poisson_a, newdata = melanoma_10y_spl3,
+                                     type = "response")
+## per 1000 person-years
+melanoma_10y_spl3$haz_grp_1k <- melanoma_10y_spl3$haz_grp * 1000
 
-haz_grp <- predict(poisson_a, newdata = newdata, type = "response")
-
-melanoma_10y_spl2 <- melanoma_10y_spl2 %>% 
-                     mutate( haz_grp_1k= haz_grp * 1000,
-                             midtime = (start + t)/2)
-
-ggplot(data = melanoma_10y_spl2, aes(x=start, y = haz_grp_1k))
+## Plot
+ggplot(data = melanoma_10y_spl3, aes(x=interval/12, y = haz_grp_1k)) +
+    geom_point()+
+    scale_y_continuous(name="Baseline hazard (1000 pys)", breaks = c(5,10,20,50,100,150), limits = c(0, 150))+
+    scale_x_continuous(name="Years from diagnosis", breaks = c(2, 4, 6, 8, 10), limits = c(0, 10)) +
+    ggtitle("Localised skin melanoma. Plot of the estimated baseline hazard function for the piecewise
+model.")
+  
