@@ -94,3 +94,24 @@ ggplot(data = melanoma_10y_spl3, aes(x=interval/12, y = haz_grp_1k)) +
     ggtitle("Localised skin melanoma. Plot of the estimated baseline hazard function for the piecewise
 model.")
   
+##(b) linear splines (1 knot at knots at 1.5 years)
+melanoma_10y_spl3$midtime <- 0.0416667 + 0.0833333*(melanoma_10y_spl3$interval-1)
+melanoma_10y_spl4 <- melanoma_10y_spl3 %>% 
+                     mutate(lin_s1 = midtime,
+                            lin_int2 = ifelse(midtime>1.5, 1, 0),
+                            lin_s2 = (midtime - 1.5)*(midtime>1.5))
+
+## Fit two separate linear regression lines (4 parameters)
+poisson_b <- glm( d ~ lin_s1 + lin_int2 + lin_s2 + offset( log(pt)), 
+                  family = poisson,
+                  data = melanoma_10y_spl4 )
+
+summary(poisson_b)
+eform(poisson_b)
+
+##  predict the baseline (one parameter for each interval)
+melanoma_10y_spl4 <- melanoma_10y_spl4 %>% mutate ( pt = 1 ) ## to have log(pt) = 0 as no offset
+melanoma_10y_spl4$haz_grp <- predict(poisson_b, newdata = melanoma_10y_spl4,
+                                     type = "response")
+## per 1000 person-years
+melanoma_10y_spl4$haz_grp_1k <- melanoma_10y_spl4$haz_grp * 1000
