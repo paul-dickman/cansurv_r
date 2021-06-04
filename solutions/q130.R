@@ -1,13 +1,15 @@
 ## Exercise 130
 ## Created: 2021-04-16 Enoch Chen 
-## Edited:  2021-05-07 Enoch Chen
+## Edited:  2021-06-04 Enoch Chen
 ###############################################################################
 ## Load the packages
 library(biostat3)
 library(haven)
 library(dplyr)   # manipulate data
 library(splines) # natural splines
-library(ggplot2)
+library(rstpm2)  # nsx
+library(ggplot2) # ggplot
+library(Epi)     # Ns
 
 ## Read data
 ## All stages
@@ -77,7 +79,7 @@ poisson_a <- glm( d ~ as.factor(interval) -1 + offset( log(pt)),
                   family = poisson,
                   data = melanoma_10y_spl2 )
 summary(poisson_a)
-eform(poisson_a)
+biostat3::eform(poisson_a)
 
 ##  predict the baseline (one parameter for each interval)
 melanoma_10y_spl3 <- melanoma_10y_spl2 %>% mutate (pt0 = pt, ## keep the original pt
@@ -109,7 +111,7 @@ poisson_b <- glm( d ~ lin_s1 + lin_int2 + lin_s2 + offset( log(pt0)),
                   data = melanoma_10y_spl4 )
 
 summary(poisson_b)
-eform(poisson_b)
+biostat3::eform(poisson_b)
 
 ##  predict the baseline (one parameter for each interval)
 melanoma_10y_spl4 <- melanoma_10y_spl4 %>% mutate ( pt1 = pt0, ## keep the original pt
@@ -143,7 +145,7 @@ poisson_c <- glm( d ~ lin_s1 + lin_s2 + offset( log(pt1)),
                   data = melanoma_10y_spl4 )
 
 summary(poisson_c)
-eform(poisson_c)
+biostat3::eform(poisson_c)
 
 ##  predict the baseline (one parameter for each interval)
 melanoma_10y_spl4 <- melanoma_10y_spl4 %>% mutate ( pt2 = pt1, ## keep the original pt
@@ -185,7 +187,7 @@ poisson_d <- glm( d ~ cubic_s1 + cubic_s2 + cubic_s3 + cubic_int + cubic_lin+ cu
                   data = melanoma_10y_spl5 )
 
 summary(poisson_d)
-eform(poisson_d)
+biostat3::eform(poisson_d)
 
 ##  predict the baseline (one parameter for each interval)
 melanoma_10y_spl5 <- melanoma_10y_spl5 %>% mutate ( pt3 = pt2, ## keep the original pt
@@ -213,7 +215,7 @@ poisson_e <- glm( d ~ cubic_s1 + cubic_s2 + cubic_s3 + cubic_lin+ cubic_quad + c
                   data = melanoma_10y_spl5 )
 
 summary(poisson_e)
-eform(poisson_e)
+biostat3::eform(poisson_e)
 
 ##  predict the baseline (one parameter for each interval)
 melanoma_10y_spl5 <- melanoma_10y_spl5 %>% mutate ( pt4 = pt3, ## keep the original pt
@@ -240,7 +242,7 @@ poisson_f <- glm( d ~ cubic_s1 + cubic_s2 + cubic_s3 + cubic_quad + cubic_s4 + o
                   data = melanoma_10y_spl5 )
 
 summary(poisson_f)
-eform(poisson_f)
+biostat3::eform(poisson_f)
 
 ##  predict the baseline (one parameter for each interval)
 melanoma_10y_spl5 <- melanoma_10y_spl5 %>% mutate ( pt5 = pt4, ## keep the original pt
@@ -266,7 +268,7 @@ poisson_g <- glm( d ~ cubic_s1 + cubic_s2 + cubic_s3 + cubic_s4 + offset( log(pt
                   data = melanoma_10y_spl5 )
 
 summary(poisson_g)
-eform(poisson_g)
+biostat3::eform(poisson_g)
 
 ##  predict the baseline (one parameter for each interval)
 melanoma_10y_spl5 <- melanoma_10y_spl5 %>% mutate ( pt6 = pt5, ## keep the original pt
@@ -286,13 +288,67 @@ ggplot(data = melanoma_10y_spl5, aes(x=midtime, y = haz_grp_1k)) +
   ggtitle("Localised skin melanoma. Plot of the estimated baseline hazard function for the piecewise
 model and cubic spline model with continuous first and second derivatives.")
 
-##restricted cubic splines
-library(Epi) ## use natural splines from Epi package
+##(h) generate splines with 5 knots (4 df)
+# Sort the column names as year8594, agegrp, female, fu
+melanoma_10y_spl5 <- melanoma_10y_spl5[,c(3, 4, 2, 1, 6, 5, 7:39)]
 
-##(h) generate splines with 5 knots (4 df) ?????
+
+
+##(i) first just add the linear term (rcs1)
+#spline
 fit <- lm(d ~ ns(midtime, df = 4), data = melanoma_10y_spl5)
 summary(fit)
 attr(terms(fit), "predvars")
 
-cbind(melanoma_10y_spl5, Ns(melanoma_10y_spl5$midtime, df=4))
+# yields the same results as above using Epi::ns
+ns(melanoma_10y_spl5$midtime, df = 4)
 
+##(j) now add remaining spline terms
+poisson_j<- glm(d ~ ns(midtime, df = 4) + offset(  log(pt6) ), 
+                family = poisson,
+                data = melanoma_10y_spl5)
+summary(poisson_j)
+biostat3::eform(poisson_j)
+
+##  predict the baseline (one parameter for each interval)
+melanoma_10y_spl5 <- melanoma_10y_spl5 %>% mutate ( pt7 = pt6, ## keep the original pt
+                                                    pt6 = 1 )  ## to have log(pt) = 0 as no offset
+melanoma_10y_spl5$haz_rcs2 <- predict(poisson_j, newdata = melanoma_10y_spl5,
+                                        type = "response")
+## per 1000 person-years
+melanoma_10y_spl5$haz_rcs2_1k <- melanoma_10y_spl5$haz_rcs2 * 1000
+
+## Plot
+ggplot(data = melanoma_10y_spl5, aes(x=midtime, y = haz_grp_1k)) +
+  geom_point()+
+  geom_line(data = melanoma_10y_spl5, aes(x=midtime, y = haz_rcs2_1k), color = "red") +
+  geom_vline(xintercept = 2, linetype="dashed") +
+  scale_y_continuous(name="Baseline hazard (1000 pys)", breaks = c(5,10,20,50,100,150), limits = c(0, 150))+
+  scale_x_continuous(name="Years from diagnosis", breaks = c(2, 4, 6, 8, 10), limits = c(0, 10)) +
+  ggtitle("Localised skin melanoma. Plot of the estimated baseline hazard function for the piecewise
+model and restricted cubic spline model.")
+
+## (k) look at impact of moving boundary knots within data
+poisson_k<- glm(d ~ Ns(midtime, knots = c(1, 2, 3)) + offset(  log(pt7) ), 
+                family = poisson,
+                data = melanoma_10y_spl5)
+summary(poisson_k)
+biostat3::eform(poisson_k)
+
+##  predict the baseline (one parameter for each interval)
+melanoma_10y_spl5 <- melanoma_10y_spl5 %>% mutate ( pt8 = pt7, ## keep the original pt
+                                                    pt7 = 1 )  ## to have log(pt) = 0 as no offset
+melanoma_10y_spl5$haz_rcs3 <- predict(poisson_k, newdata = melanoma_10y_spl5,
+                                      type = "response")
+## per 1000 person-years
+melanoma_10y_spl5$haz_rcs3_1k <- melanoma_10y_spl5$haz_rcs3 * 1000
+
+## Plot
+ggplot(data = melanoma_10y_spl5, aes(x=midtime, y = haz_grp_1k)) +
+  geom_point()+
+  geom_line(data = melanoma_10y_spl5, aes(x=midtime, y = haz_rcs3_1k), color = "red") +
+  geom_vline(xintercept = c(1, 2, 3), linetype="dashed") +
+  scale_y_continuous(name="Baseline hazard (1000 pys)", breaks = c(5,10,20,50,100,150), limits = c(0, 150))+
+  scale_x_continuous(name="Years from diagnosis", breaks = c(2, 4, 6, 8, 10), limits = c(0, 10)) +
+  ggtitle("Localised skin melanoma. Plot of the estimated baseline hazard function for the piecewise
+model with knots at 1, 2, and 3 years.")
