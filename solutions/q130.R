@@ -1,6 +1,6 @@
 ## Exercise 130
 ## Created: 2021-04-16 Enoch Chen 
-## Edited:  2021-06-04 Enoch Chen
+## Edited:  2021-06-21 Enoch Chen
 ###############################################################################
 ## Load the packages
 library(biostat3)
@@ -58,6 +58,7 @@ melanoma_10y <- mutate(melanoma,
 ##(a)-i. Split the data with narrow (1 month) time intervals
 # Split the time scale
 melanoma_10y_spl <- survSplit(melanoma_10y, cut=1/12*(0:120), end="t", start="start", event = "status" ) # event must be a character variable
+melanoma_10y_spl
 
 ## Calculate follow-up time and recode start time as a factor
 melanoma_10y_spl <- mutate(melanoma_10y_spl,
@@ -71,21 +72,22 @@ melanoma_10y_spl2 <- melanoma_10y_spl %>%
 ## Generate interval 
 melanoma_10y_spl2 <- melanoma_10y_spl2  %>%
                      group_by(fu) %>%
-                     mutate(interval = group_indices()) ## equivalent to Stata's egen interval=group()
+                     mutate(interval = cur_group_id()) ## equivalent to Stata's egen interval=group()
 
 ##(a)-ii.Fit a model with a parameter for each interval
 ## glm -1 is suppress constant term, equivalent to Stata's nocons
-poisson_a <- glm( d ~ as.factor(interval) -1 + offset( log(pt)), 
+poisson_a <- glm( d ~ as.factor(interval) - 1 + offset(log(pt)), 
                   family = poisson,
                   data = melanoma_10y_spl2 )
 summary(poisson_a)
 biostat3::eform(poisson_a)
 
-##  predict the baseline (one parameter for each interval)
+##  Predict the baseline (one parameter for each interval)
 melanoma_10y_spl3 <- melanoma_10y_spl2 %>% mutate (pt0 = pt, ## keep the original pt
                                                    pt = 1 )  ## to have log(pt) = 0 as no offset
 melanoma_10y_spl3$haz_grp <- predict(poisson_a, newdata = melanoma_10y_spl3,
                                      type = "response")
+
 ## per 1000 person-years
 melanoma_10y_spl3$haz_grp_1k <- melanoma_10y_spl3$haz_grp * 1000
 
@@ -113,11 +115,12 @@ poisson_b <- glm( d ~ lin_s1 + lin_int2 + lin_s2 + offset( log(pt0)),
 summary(poisson_b)
 biostat3::eform(poisson_b)
 
-##  predict the baseline (one parameter for each interval)
+## Predict the baseline (one parameter for each interval)
 melanoma_10y_spl4 <- melanoma_10y_spl4 %>% mutate ( pt1 = pt0, ## keep the original pt
                                                     pt0 = 1 )  ## to have log(pt) = 0 as no offset
 melanoma_10y_spl4$haz_lin1 <- predict(poisson_b, newdata = melanoma_10y_spl4,
                                      type = "response")
+
 ## per 1000 person-years
 melanoma_10y_spl4$haz_lin1_1k <- melanoma_10y_spl4$haz_lin1 * 1000
 
@@ -147,11 +150,12 @@ poisson_c <- glm( d ~ lin_s1 + lin_s2 + offset( log(pt1)),
 summary(poisson_c)
 biostat3::eform(poisson_c)
 
-##  predict the baseline (one parameter for each interval)
+## Predict the baseline (one parameter for each interval)
 melanoma_10y_spl4 <- melanoma_10y_spl4 %>% mutate ( pt2 = pt1, ## keep the original pt
                                                     pt1 = 1 )  ## to have log(pt) = 0 as no offset
 melanoma_10y_spl4$haz_lin2 <- predict(poisson_c, newdata = melanoma_10y_spl4,
                                       type = "response")
+
 ## per 1000 person-years
 melanoma_10y_spl4$haz_lin2_1k <- melanoma_10y_spl4$haz_lin2 * 1000
 
@@ -189,7 +193,7 @@ poisson_d <- glm( d ~ cubic_s1 + cubic_s2 + cubic_s3 + cubic_int + cubic_lin+ cu
 summary(poisson_d)
 biostat3::eform(poisson_d)
 
-##  predict the baseline (one parameter for each interval)
+## Predict the baseline (one parameter for each interval)
 melanoma_10y_spl5 <- melanoma_10y_spl5 %>% mutate ( pt3 = pt2, ## keep the original pt
                                                     pt2 = 1 )  ## to have log(pt) = 0 as no offset
 melanoma_10y_spl5$haz_cubic1 <- predict(poisson_d, newdata = melanoma_10y_spl5,
@@ -208,7 +212,7 @@ ggplot(data = melanoma_10y_spl5, aes(x=midtime, y = haz_grp_1k)) +
   ggtitle("Localised skin melanoma. Plot of the estimated baseline hazard function for the piecewise
 model and cubic spline model.")
 
-## (e) constrain to join at knots (drop separate intercept)	
+## (e) Constrain to join at knots (drop separate intercept)	
 ## Regression
 poisson_e <- glm( d ~ cubic_s1 + cubic_s2 + cubic_s3 + cubic_lin+ cubic_quad + cubic_s4+ offset( log(pt3)), 
                   family = poisson,
@@ -217,7 +221,7 @@ poisson_e <- glm( d ~ cubic_s1 + cubic_s2 + cubic_s3 + cubic_lin+ cubic_quad + c
 summary(poisson_e)
 biostat3::eform(poisson_e)
 
-##  predict the baseline (one parameter for each interval)
+## Predict the baseline (one parameter for each interval)
 melanoma_10y_spl5 <- melanoma_10y_spl5 %>% mutate ( pt4 = pt3, ## keep the original pt
                                                     pt3 = 1 )  ## to have log(pt) = 0 as no offset
 melanoma_10y_spl5$haz_cubic2 <- predict(poisson_e, newdata = melanoma_10y_spl5,
@@ -244,7 +248,7 @@ poisson_f <- glm( d ~ cubic_s1 + cubic_s2 + cubic_s3 + cubic_quad + cubic_s4 + o
 summary(poisson_f)
 biostat3::eform(poisson_f)
 
-##  predict the baseline (one parameter for each interval)
+## Predict the baseline (one parameter for each interval)
 melanoma_10y_spl5 <- melanoma_10y_spl5 %>% mutate ( pt5 = pt4, ## keep the original pt
                                                     pt4 = 1 )  ## to have log(pt) = 0 as no offset
 melanoma_10y_spl5$haz_cubic3 <- predict(poisson_f, newdata = melanoma_10y_spl5,
@@ -263,7 +267,7 @@ ggplot(data = melanoma_10y_spl5, aes(x=midtime, y = haz_grp_1k)) +
 model and cubic spline model with continuous first derivatives.")
 
 ## (g) continuous 2nd derivative (drop second quadratic term)
-poisson_g <- glm( d ~ cubic_s1 + cubic_s2 + cubic_s3 + cubic_s4 + offset( log(pt5)), 
+poisson_g <- glm( d ~ cubic_s1 + cubic_s2 + cubic_s3 + cubic_s4 + offset(log(pt5)), 
                   family = poisson,
                   data = melanoma_10y_spl5 )
 
@@ -288,11 +292,13 @@ ggplot(data = melanoma_10y_spl5, aes(x=midtime, y = haz_grp_1k)) +
   ggtitle("Localised skin melanoma. Plot of the estimated baseline hazard function for the piecewise
 model and cubic spline model with continuous first and second derivatives.")
 
+## Caution! The R implementation departs from the Stata implementation, 
+## using the ns() function, which is based on a projection of B-splines, 
+## rather than using truncated power splines as per Stata.
+
 ##(h) generate splines with 5 knots (4 df)
 # Sort the column names as year8594, agegrp, female, fu
 melanoma_10y_spl5 <- melanoma_10y_spl5[,c(3, 4, 2, 1, 6, 5, 7:39)]
-
-
 
 ##(i) first just add the linear term (rcs1)
 #spline
@@ -304,7 +310,7 @@ attr(terms(fit), "predvars")
 ns(melanoma_10y_spl5$midtime, df = 4)
 
 ##(j) now add remaining spline terms
-poisson_j<- glm(d ~ ns(midtime, df = 4) + offset(  log(pt6) ), 
+poisson_j<- glm(d ~ ns(midtime, df = 4) + offset(log(pt6) ), 
                 family = poisson,
                 data = melanoma_10y_spl5)
 summary(poisson_j)
@@ -335,7 +341,7 @@ poisson_k<- glm(d ~ Ns(midtime, knots = c(1, 2, 3)) + offset(  log(pt7) ),
 summary(poisson_k)
 biostat3::eform(poisson_k)
 
-##  predict the baseline (one parameter for each interval)
+## Predict the baseline (one parameter for each interval)
 melanoma_10y_spl5 <- melanoma_10y_spl5 %>% mutate ( pt8 = pt7, ## keep the original pt
                                                     pt7 = 1 )  ## to have log(pt) = 0 as no offset
 melanoma_10y_spl5$haz_rcs3 <- predict(poisson_k, newdata = melanoma_10y_spl5,
