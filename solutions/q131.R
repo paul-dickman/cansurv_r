@@ -200,10 +200,19 @@ legend("topright", legend=paste0("df=",1:6), lty=1:6)
 ##'the 4 internal knots are selected at random centiles of the 
 ##'distribution of event times.
 
+## Specily the spline placement
+knots <- quantile(melanoma$t, probs=c(0, .2, .4, .6, .8))
+
+melanoma$spline <- nsx(melanoma$t, knots = knots)
+
+fpm_k <- stpm2(Surv(t, event) ~ year8594 + spline, data=melanoma)
+fpm_k <- stpm2(Surv(t, event) ~ year8594 , data=melanoma, df =5 )
+
+summary(fpm_k)
+
 ##'As there are many ties in this data we add a small random number to the survival times
 ##'(otherwise we risk having knots in the same location)
 melanoma$t2 <- melanoma$t + rnorm(nrow(melanoma), mean = 0, sd = 0.001)
-
 
 fpm_k <- stpm2(Surv(t2, event) ~ year8594, data=melanoma, df=c(22, 33))
 
