@@ -18,11 +18,21 @@ melanoma <- read_dta("melanoma.dta")%>%
                    event  = ifelse((status == 1) & surv_mm<= 120.5, 1, 0), # Redefine status
                    surv_mm = ifelse(surv_mm<= 120.5, surv_mm, 120.5),     # censored everyone after 120 months
                    t = surv_mm/12,                                     # surv_mm in years
-                   agegrp1 = (agegrp== 1)+0, # used by time-dependent effect
-                   agegrp2 = (agegrp== 2)+0, # used by time-dependent effect
-                   agegrp3 = (agegrp== 3)+0, # used by time-dependent effect
-                   agegrp4 = (agegrp== 4)+0) # used by time-dependent effect
-                       
+                   agegrp1 = (agegrp== 0)+0, # used by time-dependent effect
+                   agegrp2 = (agegrp== 1)+0, # used by time-dependent effect
+                   agegrp3 = (agegrp== 2)+0, # used by time-dependent effect
+                   agegrp4 = (agegrp== 3)+0) # used by time-dependent effect
+
+melanoma <- melanoma %>% 
+            mutate(year8594 = as_factor(year8594),
+                   female = as_factor(female),
+                   agegrp = as_factor(agegrp),
+                   agegrp1 = as_factor(agegrp1),
+                   agegrp2 = as_factor(agegrp2),
+                   agegrp3 = as_factor(agegrp3),
+                   agegrp4 = as_factor(agegrp4)) 
+str(melanoma)
+
 #' status is coded as follows
 #' 1 [Dead: cancer]
 #' 2 [Dead: other]
@@ -196,11 +206,74 @@ for (i in 1:5 ) {
 legend("topright", legend=paste0("df=",1:6), lty=1:6)
 
 ##(k) knot locations
-##'run the following code to fit 10 models with 5df (6 knots) where
+##'run the following code to fit 10 models with 5 df (6 knots) where
 ##'the 4 internal knots are selected at random centiles of the 
 ##'distribution of event times.
+##'
+##'Please refer to the demontration on Stata
 
-## Specily the spline placement
+##(l) Include effect of age group and sex
+#' Cox
+cox_l <- coxph(Surv(t, event) ~ year8594 + female + agegrp, data = melanoma)
+summary(cox_l)  
+df_cox_l <- data.frame(model = "cox_l",
+                       year8594 = coef(summary(cox_l))[1,2],
+                       female1  = coef(summary(cox_l))[2,2],
+                       "agegrp45-59" = coef(summary(cox_l))[3,2],
+                       "agegrp60-74" = coef(summary(cox_l))[4,2],
+                       "agegrp75+" = coef(summary(cox_l))[5,2])
+
+#' FPM
+fpm_l <- stpm2(Surv(t, event) ~ year8594 + female + agegrp, df = 4, data = melanoma)
+summary(fpm_l)
+eform(fpm_l)
+
+df_fpm_l <- data.frame(model = "fpm_l",
+                       year8594 = exp(as.numeric(coef(fpm_l))[2]),
+                       female1  = exp(as.numeric(coef(fpm_l))[3]),
+                       "agegrp45-59" = exp(as.numeric(coef(fpm_l))[4]),
+                       "agegrp60-74" = exp(as.numeric(coef(fpm_l))[5]),
+                       "agegrp75+" = exp(as.numeric(coef(fpm_l))[6]))
+
+#' Compare outputs from Cox and FPM
+rbind(df_cox_l, df_fpm_l)
+
+##(m) 
+#'Estimate are very similar as both models assume proportional 
+#'hazards and we are using spline functions to model the hazard 
+#'function flexibly
+
+##(n) obtaining predictions 
+temptime <- seq(0, 10, by = 0.05)
+                
+new.data <- expand.grid(year8594 =levels(melanoma$year8594)[1], 
+                        female = levels(melanoma$female)[1],
+                        agegrp = levels(melanoma$agegrp)[1])
+
+S0 <- predict(fpm_l, newdata = new.data, type = "surv", grid=TRUE, full = TRUE)
+
+ggplot(S0, aes(x=t,y=Estimate)) +
+        xlab("temptime") +
+        ylab("S0") +
+        geom_line()
+
+#' predict at certain values 
+new.data2 <- expand.grid(year8594 =levels(melanoma$year8594)[2], # Diagnosed 85-94
+                         female = levels(melanoma$female)[2], # Female 1
+                         agegrp = levels(melanoma$agegrp)[4]) # Agegrp 75+  
+
+S_F_8594_age75 <- predict(fpm_l, newdata = new.data2, type = "surv", grid=TRUE, full = TRUE, se.fit = TRUE)
+
+ggplot(S_F_8594_age75, aes(x=t,y=Estimate,ymin=lower,ymax=upper)) +
+        xlab("Time since diagnosis (years)") +
+        ylab("S(t)") +
+        geom_ribbon(alpha=0.6) +
+        geom_line()
+
+##### Syntax ends here ####
+#' Archived
+#'(k)
+#'## Specily the spline placement
 knots <- quantile(melanoma$t, probs=c(0, .2, .4, .6, .8))
 
 melanoma$spline <- nsx(melanoma$t, knots = knots)
@@ -212,7 +285,7 @@ summary(fpm_k)
 
 ##'As there are many ties in this data we add a small random number to the survival times
 ##'(otherwise we risk having knots in the same location)
-melanoma$t2 <- melanoma$t + rnorm(nrow(melanoma), mean = 0, sd = 0.001)
+melanoma$t2 <- melanoma$t + runif(nrow(melanoma), min = 0, max = 0.001)
 
 fpm_k <- stpm2(Surv(t2, event) ~ year8594, data=melanoma, df=c(22, 33))
 
