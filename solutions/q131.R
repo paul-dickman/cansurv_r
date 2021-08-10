@@ -210,7 +210,7 @@ legend("topright", legend=paste0("df=",1:6), lty=1:6)
 ##'the 4 internal knots are selected at random centiles of the 
 ##'distribution of event times.
 ##'
-##'Please refer to the demontration on Stata
+##'Please refer to the demonstration in Stata
 
 ##(l) Include effect of age group and sex
 #' Cox
