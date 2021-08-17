@@ -40,10 +40,10 @@ str(melanoma)
 #' 4 [Lost to follow-up]
 
 #' agegrp is coded as follows
-#' 1 [0-44]
-#' 2 [45-59]
-#' 3 [60-74]
-#' 4 [75+]
+#' 0 [0-44]  -> agegrp1
+#' 1 [45-59] -> agegrp2
+#' 2 [60-74] -> agegrp3
+#' 3 [75+]   -> agegrp4
 
 #' sex is coded as follows
 #' 1 [Male]
@@ -210,7 +210,7 @@ legend("topright", legend=paste0("df=",1:6), lty=1:6)
 ##'the 4 internal knots are selected at random centiles of the 
 ##'distribution of event times.
 ##'
-##'Please refer to the demontration on Stata
+##'Please refer to the demonstration in Stata
 
 ##(l) Include effect of age group and sex
 #' Cox
@@ -271,6 +271,7 @@ ggplot(S_F_8594_age75, aes(x=t,y=Estimate,ymin=lower,ymax=upper)) +
         geom_line()
 
 ##### Syntax ends here ####
+
 #' Archived
 #'(k)
 #'## Specily the spline placement
