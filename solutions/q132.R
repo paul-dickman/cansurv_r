@@ -13,7 +13,7 @@ library(ggplot2) # ggplot
 melanoma <- read_dta("melanoma.dta")%>% 
             filter(stage == 1) %>%
             mutate(year8594 = ifelse(year8594 == 1, "Diagnosed 85-94", "Diagnosed 75-84"),
-                   female = ifelse(sex == 2, 1, 0), # Create a female variable
+                   female = ifelse(sex == 2, +1, +0), # Create a female variable
                    event  = ifelse((status == 1) & surv_mm<= 60.5, 1, 0), # Redefine status
                    surv_mm = ifelse(surv_mm<= 60.5, surv_mm, 60.5),       # censored everyone after 60 months
                    t = surv_mm/12,                                     # surv_mm in years
@@ -24,7 +24,6 @@ melanoma <- read_dta("melanoma.dta")%>%
 
 melanoma <- melanoma %>% 
             mutate(year8594 = as_factor(year8594),
-                   female = as_factor(female),
                    agegrp = as_factor(agegrp)) 
 str(melanoma)
 
@@ -62,14 +61,13 @@ summary(fpm_b)
 eform(fpm_b)
 
 ## Hazard function
-females <- levels(melanoma$female)
 years <- levels(melanoma$year8594)
 agegrps <- levels(melanoma$agegrp)
 
-newdata1 <- data.frame(female=females[1], year8594=years[1], agegrp2=0, agegrp3=0, agegrp4=0)
-newdata2 <- data.frame(female=females[1], year8594=years[1], agegrp2=1, agegrp3=0, agegrp4=0)
-newdata3 <- data.frame(female=females[1], year8594=years[1], agegrp2=0, agegrp3=1, agegrp4=0)
-newdata4 <- data.frame(female=females[1], year8594=years[1], agegrp2=0, agegrp3=0, agegrp4=1)
+newdata1 <- data.frame(female=0, year8594=years[1], agegrp2=0, agegrp3=0, agegrp4=0)
+newdata2 <- data.frame(female=0, year8594=years[1], agegrp2=1, agegrp3=0, agegrp4=0)
+newdata3 <- data.frame(female=0, year8594=years[1], agegrp2=0, agegrp3=1, agegrp4=0)
+newdata4 <- data.frame(female=0, year8594=years[1], agegrp2=0, agegrp3=0, agegrp4=1)
 
 plot(fpm_b, newdata=newdata1, 
      xlab="Time since diagnosis (years)",
@@ -131,8 +129,8 @@ plot(fpm_c,newdata=newdata1,
      xlab="Time since diagnosis (years)")
 
 ##(g) Difference in survival functions
-newdata_g1 <- data.frame(female=females[2], year8594=years[2], agegrp2=0, agegrp3=0, agegrp4=0)
-newdata_g2 <- data.frame(female=females[2], year8594=years[2], agegrp2=0, agegrp3=0, agegrp4=1)
+newdata_g1 <- data.frame(female=1, year8594=years[2], agegrp2=0, agegrp3=0, agegrp4=0)
+newdata_g2 <- data.frame(female=1, year8594=years[2], agegrp2=0, agegrp3=0, agegrp4=1)
 
 # Plot survival function of agegrp1 and agegrp2 separately
 plot(fpm_c,newdata=newdata_g1,
@@ -161,7 +159,6 @@ lapply(1:3, function(i){
     BIC=BIC(hr4_df_i))
     
 })
-out %>% Rbind
 
 # tvc = 1
 hr4_df1 <- stpm2(Surv(t, event) ~ female + year8594 + agegrp2 + agegrp3 + agegrp4, 
@@ -188,21 +185,24 @@ lines(hr4_df3, newdata=newdata1, type="hr", var="agegrp4" , col = "green")
 legend("topright", legend=c("1 df", "2 df", "3 df"), lty=1, col=c("red","blue","green"))
 
 ##(i) two time-dependent effects
-fpm_i <- stpm2(Surv(t, event) ~ female+ agegrp2 + agegrp3 + agegrp4, 
+fpm_i <- stpm2(Surv(t, event) ~ female + agegrp2 + agegrp3 + agegrp4, 
                  tvc=list(agegrp2= 3, agegrp3= 3, agegrp4 = 3, female = 3), data = melanoma, df=4)
 summary(fpm_i)
 eform(fpm_i)
 
-newdata_i1 <- data.frame(female=females[2], agegrp2=0, agegrp3=0, agegrp4=0)
-newdata_i2 <- data.frame(female=females[2], agegrp2=0, agegrp3=0, agegrp4=1)
+newdata_i1 <- data.frame(female=0, agegrp2=0, agegrp3=0, agegrp4=0)
+newdata_i2 <- data.frame(female=0, agegrp2=0, agegrp3=0, agegrp4=1)
 
 plot(fpm_i, newdata=newdata_i1, 
      xlab="Time since diagnosis (years)",
-     ylab="Hazard ratio",
-     log = "y",
-     type="hr", var="agegrp4", ci=FALSE, line.col = "red")
+     type="hr", 
+     var="female",
+     ci=TRUE, ci.col = rgb(red = 1, green = 0, blue = 0, alpha = 0.1), line.col = "red")
 
-lines(fpm_i, newdata=newdata_i2,  type="hr", var="agegrp4")
+lines(fpm_i, newdata=newdata_i2, 
+      type="hr", 
+      var="female",
+      ci=TRUE, ci.col = rgb(red = 0, green = 0, blue = 1, alpha = 0.1) , col = "blue")
 
 ##(j) 
 ##'skip
