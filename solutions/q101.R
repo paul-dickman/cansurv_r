@@ -22,7 +22,6 @@ xlab="Time since diagnosis in months",
 main = "Kaplan−Meier estimates of cause−specific survival")
 
 ## Kaplan-Meier plot with risk table
-
 ## Load survminer
 library(survminer)
 
