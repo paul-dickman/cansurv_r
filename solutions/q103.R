@@ -1,6 +1,7 @@
 ## Exercise 103
 ## Created: 2021-03-04 Enoch Chen 
-## Edited:  2021-03-04 Enoch Chen 
+## Edited:  2023-06-05 Enoch Chen: add "list the first few observations"
+##          2021-03-04 Enoch Chen 
 ## Reference: Biostatistics III in R. https://biostat3.net/download/R/solutions/q2.html
 ###############################################################################
 ## Load the packages
@@ -22,10 +23,12 @@ melanoma <- read_dta("melanoma.dta")
 #' 2 [Regional]
 #' 3 [Distant]
 
+## List the first few observations
+head(melanoma)
+
 ## Tabulate stage distribution
 Freq <- xtabs(~stage, data=melanoma)
 cbind(Freq, Percent=prop.table(Freq) %>% `*`(100) %>% round(2))
-
 
 ##(a) Survival and hazard function by stage
 ## Survival
@@ -42,6 +45,7 @@ plot(hazards,
      col=1:4, lty=1, xlim=c(0,250), ylim=c(0,0.08),
      legend.args=list(bty="n"))
 
+
 ##(b) Mortality rates by stage 
 ## events/person-months (be aware of the unit!)
 survRate(Surv(surv_mm, status == 1) ~ stage, data = melanoma)
@@ -49,13 +53,14 @@ survRate(Surv(surv_mm, status == 1) ~ stage, data = melanoma)
 ## events/person-years 
 survRate(Surv(surv_mm/12, status == 1) ~ stage, data = melanoma)
 
+
 ##(c) events/1000 person-years
 survRate(Surv(surv_mm/12/1000, status == 1) ~ stage, data = melanoma)
 
 
 ##(d)  Survival and hazard function by sex
 
-## sex is coded as follows
+## sex was coded as follows
 #' 1 [Male]
 #' 2 [Female]
 
