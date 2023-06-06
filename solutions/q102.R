@@ -19,7 +19,7 @@ melanoma <- read_dta("melanoma.dta")
 
 ## Generate a new failure variable
 melanoma <- transform(melanoma,
-                      csr_fail = ifelse( status == 1, 1, 0))
+                      csr_fail = ifelse(status == 1, 1, 0))
 
 ## Life table
 print(lifetab2(Surv(floor(surv_yy), status == 1)~1, melanoma, breaks=0:20), digits=2)
