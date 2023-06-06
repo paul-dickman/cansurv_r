@@ -7,7 +7,7 @@ library(haven)
 library(tidyverse)
 
 ## Read the popmort file
-popmort <- read_dta("popmort.dta")
+popmort <- read_dta("../data/popmort.dta")
 
 ## Prepare popmort file for making ratetable
 popmort_wide <- pivot_wider(popmort,
@@ -29,3 +29,4 @@ ratetable <- transrate(popmort_males,
                        popmort_females,
                        yearlim = c(1951, 2000),
                        int.length = 1)
+
