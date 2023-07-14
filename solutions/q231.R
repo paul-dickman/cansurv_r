@@ -33,9 +33,8 @@ colon <- colon %>%
 
 ##(b)
 # Flexible parametric relative survival model
-fit <- stpm2(Surv(st_years, status == 1) ~ age, 
-             data = colon, df = 5,
-             bhazard(rate))
+fit <- stpm2(Surv(st_years, status == 1) ~ age + bhazard(rate),
+             data = colon, df = 5)
 summary(fit)
 eform(fit)
 
