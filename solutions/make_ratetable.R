@@ -1,13 +1,14 @@
 ## Make ratetable
 ## Created: 2023-06-05 Joshua Entrop 
 ## Edited:  2023-06-06 Enoch Chen: minor changes
+## Updated: 2024-11-18 Paul Dickman
 ###############################################################################
 ## Load the packages
 library(haven)
 library(tidyverse)
 
-## Read the popmort file
-popmort <- read_dta("../data/popmort.dta")
+## Read the (Stata format) popmort file
+popmort <- read_dta("popmort.dta")
 
 ## Prepare popmort file for making ratetable
 popmort_wide <- pivot_wider(popmort,

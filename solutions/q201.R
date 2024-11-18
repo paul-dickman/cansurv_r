@@ -1,6 +1,7 @@
 ## Exercise 201
 ## Created: 2023-06-05 Enoch Chen, Joshua Entrop
 ## Edited:  2023-06-06 Enoch Chen: Debug status
+## Updated: 2024-11-18 Paul Dickman (add script to create ratetable)
 ###############################################################################
 # Load packages
 library(haven)
@@ -18,6 +19,9 @@ melanoma <- melanoma %>%
             mutate(surv_dd = surv_yy * 365.241, # Time in days for relsurv pkg
                    status  = if_else(status %in% c(1, 2), 1, 0),
                    year    = year(dx))
+
+# Create an R ratetable object
+source("make_ratetable.R")
 
 # Estimate relative survival
 # (a) Annual intervals
