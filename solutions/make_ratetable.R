@@ -8,7 +8,7 @@ library(haven)
 library(tidyverse)
 
 ## Read the (Stata format) popmort file
-popmort <- read_dta("popmort.dta")
+popmort <- read_dta("../data/popmort.dta")
 
 ## Prepare popmort file for making ratetable
 popmort_wide <- pivot_wider(popmort,

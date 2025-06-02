@@ -11,12 +11,12 @@ library(lubridate)
 library(relsurv)
 
 # Load melanoma data for limited stages
-melanoma <- read_dta("melanoma.dta") %>% 
+melanoma <- read_dta("../data/melanoma.dta") %>% 
             filter(stage == 1) # Localised
 
 # Prepare melanoma dataset
 melanoma <- melanoma %>% 
-            mutate(surv_dd = surv_yy * 365.241, # Time in days for relsurv pkg
+            mutate(surv_dd = surv_mm * (365.241/12), # Time in days for relsurv pkg
                    status  = if_else(status %in% c(1, 2), 1, 0),
                    year    = year(dx))
 
@@ -25,11 +25,11 @@ source("make_ratetable.R")
 
 # Estimate relative survival
 # (a) Annual intervals
-rs_fit_e2 <- rs.surv(Surv(surv_dd, status == 1 )~ 1,
+rs_fit_e2 <- rs.surv(Surv(surv_dd, status == 1 )~ year8594,
                      data      = melanoma,
                      ratetable = ratetable,
                      method    = "ederer2",
-                     precision = 365.241,
+                     precision = 12,
                      rmap      = list(age = age * 365.241))
 
 summary(rs_fit_e2, times = c(5, 10) * 365.241)
